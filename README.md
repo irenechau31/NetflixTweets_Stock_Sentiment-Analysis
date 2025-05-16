@@ -1,54 +1,69 @@
-# NetflixTweets_Stock_Sentiment-Analysis
-OverviewThis project investigates whether social media sentiment, tweet volume, and traditional price/volume signals can predict Netflix (NFLX) stock price movements. By combining Twitter data with historical price data, we engineer features and evaluate classification and regression models to forecast next-day opening and closing price direction.
+# Netflix Tweets and Stock Price Prediction Using Sentiment, Price and Volume Signals
 
-1. Data Collection
+## Overview
 
-Tweets: Collected from Twitter API between January 1, 2020 and July 11, 2022, filtered for cashtags like $NFLX.
+This project investigates whether social media sentiment, tweet volume, and traditional price/volume signals can predict Netflix (NFLX) stock price movements. By combining Twitter data with historical price data, we engineer features and evaluate classification and regression models to forecast next-day opening and closing price direction.
 
-Stock Prices: Retrieved via yfinance and pre-saved as Parquet files containing daily Open, Close, High, Low, Volume.
+---
 
-2. Data Preprocessing
+## 1. Data Collection
 
-Tweet Cleaning: Removed URLs, mentions, hashtags, non-ASCII characters; replaced cashtags with [TICKER] tokens; tokenized and lowercased.
+- **Tweets**: Collected from Twitter API between January 1, 2020 and July 11, 2022, filtered for cashtags like `$NFLX`.  
+- **Stock Prices**: Retrieved via `yfinance` and pre-saved as Parquet files containing daily Open, Close, High, Low, and Volume.
 
-Weekend Adjustment: Tweets from Saturday/Sunday pushed to next Monday to align with trading days.
+## 2. Data Preprocessing
 
-Aggregation: Daily tweet volume (tweetVol) and cleaned text stored for feature creation.
+- **Tweet Cleaning**:  
+  - Removed URLs, mentions, hashtags, non-ASCII characters.  
+  - Replaced cashtags (`$NFLX`) with `[TICKER]` tokens.  
+  - Tokenized and lowercased text.  
+- **Weekend Adjustment**: Shifted tweets from Saturday/Sunday to the next Monday to align with trading days.  
+- **Aggregation**: Computed daily tweet volume (`tweetVol`) and retained cleaned text for feature engineering.
 
-3. Feature Engineering
+## 3. Feature Engineering
 
-Sentiment Scores: Computed per-tweet scores using BERTweet, DistilBERT (SST-2), and Loughran–McDonald lexicon.
+- **Sentiment Scores**:  
+  - BERTweet model embeddings.  
+  - DistilBERT (SST-2) sentiment scores.  
+  - Loughran–McDonald lexicon-based scores.  
+- **FAISS Smoothing**: Averaged sentiment scores over 500 nearest neighbors in embedding space to reduce noise.  
+- **Daily Aggregates**:  
+  - 7-day rolling z-scores of tweet volume.  
+  - 1-day and 7-day lag features for both volume and sentiment.  
+- **Ensemble & Interaction Terms**:  
+  - Mean ensemble of the three sentiment models.  
+  - Interaction term: `sentiment × z_vol_7d`.  
+  - Earnings window dummy for quarterly release periods.
 
-FAISS Smoothing: Smoothed BERTweet and DistilBERT scores by averaging over 500 nearest neighbors in embedding space.
+## 4. Modeling
 
-Daily Aggregates: Rolled 7-day z-scores of tweet volume; computed 1-day/7-day lags for volume and sentiment.
+- **Targets**: Binary labels indicating if next-day Open/Close > today’s Close.  
+- **Data Splits**:  
+  - **Train**: 2020–2021  
+  - **Validation**: Jan–May 2022  
+  - **Test**: Jun–Jul 2022  
+  - TimeSeriesSplit strategy.  
+- **Algorithms**:  
+  - Logistic Regression  
+  - MLP Classifier  
+  - XGBoost  
+  - Stacking Ensemble (with hyperparameter tuning and early stopping)  
+- **Evaluation**:  
+  - Classification reports, confusion matrices  
+  - ROC-AUC  
+  - Permutation feature importance  
+  - SHAP analysis
 
-Ensemble & Interaction Terms: Combined sentiment models into mean ensemble scores; added sentiment × z_vol_7d interactions; flagged earnings windows around quarterly releases.
+## 5. Key Findings
 
-4. Modeling
+- Tweet volume spikes often align with earnings or major news-driven price gaps.  
+- Smoothed sentiment signals help reduce noise and improve model stability.  
+- Earnings-week dummy and sentiment×volume interactions rank highly in feature importance.  
+- The stacking ensemble achieved ~68% accuracy and ROC-AUC ~0.66 on the test set.
 
-Targets: Binary labels for whether next-day Open/Close > today’s Close.
+## Usage
 
-Splits: Train (2020–2021), Validation (Jan–May 2022), Test (Jun–Jul 2022), using time-series split.
+1. **Install Dependencies**
 
-Algorithms: Logistic Regression, MLP Classifier, XGBoost, and a Stacking Ensemble with tuned hyperparameters and early stopping.
-
-Evaluation: Permutation importance, SHAP analysis, classification reports, ROC-AUC, and confusion matrices.
-
-5. Key Findings
-
-Tweet volume spikes often align with earnings or news-driven price gaps.
-
-Smoothed sentiment signals reduce noise and can modestly enhance predictive performance.
-
-Earnings-week dummy and sentiment×volume interactions are among top predictors.
-
-Stacking ensemble achieved approximately 68% accuracy and ROC-AUC around 0.66 on the test set.
-
-Usage
-
-Install dependencies: pandas, numpy, yfinance, sentence-transformers, transformers, faiss-cpu, xgboost, scikit-learn, shap.
-
-Place raw CSV/Parquet files under data/.
-
-Run cells sequentially in the Jupyter notebook to reproduce data processing, feature engineering, model training, and evaluation.
+   ```bash
+   pip install pandas numpy yfinance sentence-transformers transformers faiss-cpu xgboost scikit-le
